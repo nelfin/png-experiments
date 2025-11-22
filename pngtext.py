@@ -27,7 +27,7 @@ import png
 def info(tag, chunk):
     if tag in (b"tEXt", b"iTXt", b"zTXt"):
         mimetype = chunk[:chunk.find(b"\x00")].decode("latin-1")
-        return mimetype
+        return tag, mimetype, len(chunk)
 
 
 def process(tag, chunk, target_mimetype="text/plain"):
