@@ -4,7 +4,7 @@
 #     "pyqt5",
 # ]
 # ///
-from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 class DropBear(QtWidgets.QWidget):
     def __init__(self, parent=None, geom=(400, 400, 800, 800)):
@@ -12,12 +12,12 @@ class DropBear(QtWidgets.QWidget):
         self.setGeometry(*geom)
         self.setAcceptDrops(True)
         self.label = QtWidgets.QLabel("drop file here...", wordWrap=True)
-        self.fp = QtWidgets.QLabel("", wordWrap=True)
-        self.content = QtWidgets.QLabel("", wordWrap=True)
+        self.image = QtWidgets.QLabel("<image here>")
+        self.sourcecode = QtWidgets.QTextEdit()
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.label)
-        layout.addWidget(self.fp)
-        layout.addWidget(self.content)
+        layout.addWidget(self.image)
+        layout.addWidget(self.sourcecode)
         self.setLayout(layout)
 
     def dragEnterEvent(self, ev):
@@ -31,19 +31,31 @@ class DropBear(QtWidgets.QWidget):
         self.label.setText("drop file here...")
 
     def dropEvent(self, ev):
-        if ev.mimeData().hasFormat("image/png"):
+        if ev.mimeData().hasFormat("image/png") or ev.mimeData().hasImage():
+            # TODO: something here, not getting pictures when trying this out
             ev.acceptProposedAction()
-        elif ev.mimeData().hasFormat("text/uri-list"):
-            # TODO: maybe just text()?
-            # please no spaces in file names
-            # files = ev.mimeData().text().split(" ")
-            # print(files)
-            b = bytes(ev.mimeData().data("text/uri-list"))
-            # XXX: doesn't handle #comment lines lol
-            urls = b.decode("latin-1").split("\r\n")
-            self.fp.setText("<ul><li>" + "<li>".join(u for u in urls if u) + "</ul>")
-            # TODO: load file and only accept if image/png
-            ev.acceptProposedAction()
+        elif ev.mimeData().hasUrls():
+            urls = ev.mimeData().urls()
+            # load just the first for now
+            if (ok := self.loadURL(urls[0])):
+                url, image, text = ok
+                self.label.setText(url)
+                self.image.setPixmap(QtGui.QPixmap.fromImage(image))
+                self.sourcecode.setText(text)
+                ev.acceptProposedAction()
+
+    def loadURL(self, url: "QtCore.QUrl", text_mimetype="text/x-python"):
+        try:
+            image = QtGui.QImage(url.toLocalFile())
+            text = image.text(text_mimetype)
+            # alternative:
+            # from PIL import Image
+            # with Image.open(url.toLocalFile()) as im:
+            #     text = im.text.get(text_mimetype, "")
+        except OSError:  # , PIL.UnidentifiedImageError
+            return None
+        else:
+            return str(url), image, text
 
 
 app = QtWidgets.QApplication([])
