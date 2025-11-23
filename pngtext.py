@@ -18,7 +18,7 @@ Usage:
 """
 
 import argparse
-import struct
+import sys
 import zlib
 from functools import partial
 
@@ -29,6 +29,12 @@ def info(tag, chunk):
         mimetype = chunk[:chunk.find(b"\x00")].decode("latin-1")
         return tag, mimetype, len(chunk)
 
+def info_all(tag, chunk):
+    return tag, len(chunk)
+
+def dump(tag, chunk, matching_tag=b'IDAT'):
+    if tag == matching_tag:
+        return chunk
 
 def process(tag, chunk, target_mimetype="text/plain"):
     mimetype, idx = "", chunk.find(b"\x00")
@@ -53,12 +59,18 @@ parser = argparse.ArgumentParser()
 parser.add_argument('image', type=argparse.FileType('rb'), help="PNG image")
 parser.add_argument('text', type=argparse.FileType('rb'), nargs='?', default="-")
 parser.add_argument('-x', '--extract', metavar="MIME", default='text/plain', help="Extract this mimetype")
-parser.add_argument("-l", "--list", action="store_true", help="List all mimetypes")
+parser.add_argument("-l", "--list", action="store_true", help="List all text chunks")
+parser.add_argument("--list-all", action="store_true", help="List all chunks")
+parser.add_argument("--extract-raw", help="Dump the bytes of this chunk")
 
 args = parser.parse_args()
 
 if args.list:
     func = info
+elif args.list_all:
+    func = info_all
+elif args.extract_raw:
+    func = partial(dump, matching_tag=args.extract_raw.encode("latin-1"))
 else:
     func = partial(process, target_mimetype=args.extract)
 
@@ -68,4 +80,7 @@ else:
 im = png.Reader(args.image)
 for tag, data in im.chunks():
     if (result := func(tag, data)):
-        print(result)
+        if isinstance(result, bytes):
+            sys.stdout.buffer.write(result)
+        else:
+            print(result)
