@@ -1,7 +1,16 @@
+# /// script
+# requires-python = ">=3.14"
+# dependencies = [
+#     "matplotlib",
+#     "numpy",
+# ]
+# ///
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from PIL.PngImagePlugin import PngInfo
 
+matplotlib.use("Agg")
 plt.plot(np.sin(np.linspace(0, 3.1416, 100)))
 mimetype, text = "text/x-python", "np.sin(np.linspace(0, 3.1416, 100))"
 
